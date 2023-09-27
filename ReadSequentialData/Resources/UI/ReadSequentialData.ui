@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>318</width>
-    <height>458</height>
+    <height>499</height>
    </rect>
   </property>
   <layout class="QGridLayout" name="gridLayout">
@@ -148,6 +148,20 @@
            </property>
           </widget>
          </item>
+         <item row="3" column="2">
+          <widget class="QPushButton" name="pushButton_loadScaling">
+           <property name="text">
+            <string>Load</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Trans Seq:</string>
+           </property>
+          </widget>
+         </item>
          <item row="0" column="1">
           <widget class="qMRMLNodeComboBox" name="comboBox_USSeq" native="true">
            <property name="enabled">
@@ -175,6 +189,81 @@
            </property>
            <property name="renameEnabled" stdset="0">
             <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="qMRMLNodeComboBox" name="comboBox_ScalTrans" native="true">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="toolTip">
+            <string>Define the scaling transformation node.</string>
+           </property>
+           <property name="nodeTypes" stdset="0">
+            <stringlist>
+             <string>vtkMRMLLinearTransformNode</string>
+            </stringlist>
+           </property>
+           <property name="showChildNodeTypes" stdset="0">
+            <bool>false</bool>
+           </property>
+           <property name="addEnabled" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="removeEnabled" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="renameEnabled" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>CT/MRI:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="2">
+          <widget class="QPushButton" name="pushButton_loadCT">
+           <property name="text">
+            <string>Load</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="qMRMLNodeComboBox" name="comboBox_CT" native="true">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="toolTip">
+            <string>Define the CT/MRI volume node.</string>
+           </property>
+           <property name="nodeTypes" stdset="0">
+            <stringlist>
+             <string>vtkMRMLScalarVolumeNode</string>
+            </stringlist>
+           </property>
+           <property name="showChildNodeTypes" stdset="0">
+            <bool>false</bool>
+           </property>
+           <property name="addEnabled" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="removeEnabled" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="renameEnabled" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>US Seq:</string>
            </property>
           </widget>
          </item>
@@ -212,100 +301,30 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="label_3">
-           <property name="text">
-            <string>Trans Seq:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_2">
-           <property name="text">
-            <string>US Seq:</string>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="2">
-          <widget class="QPushButton" name="pushButton_USSeq">
-           <property name="text">
-            <string>Generate</string>
+          <widget class="QFrame" name="frame_5">
+           <property name="frameShape">
+            <enum>QFrame::StyledPanel</enum>
            </property>
-          </widget>
-         </item>
-         <item row="4" column="0">
-          <widget class="QLabel" name="label_6">
-           <property name="text">
-            <string>CT/MRI:</string>
+           <property name="frameShadow">
+            <enum>QFrame::Raised</enum>
            </property>
-          </widget>
-         </item>
-         <item row="4" column="2">
-          <widget class="QPushButton" name="pushButton_loadCT">
-           <property name="text">
-            <string>Load</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="2">
-          <widget class="QPushButton" name="pushButton_loadScaling">
-           <property name="text">
-            <string>Load</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="qMRMLNodeComboBox" name="comboBox_ScalTrans" native="true">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="toolTip">
-            <string>Define the scaling transformation node.</string>
-           </property>
-           <property name="nodeTypes" stdset="0">
-            <stringlist>
-             <string>vtkMRMLLinearTransformNode</string>
-            </stringlist>
-           </property>
-           <property name="showChildNodeTypes" stdset="0">
-            <bool>false</bool>
-           </property>
-           <property name="addEnabled" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="removeEnabled" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="renameEnabled" stdset="0">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="qMRMLNodeComboBox" name="comboBox_CT" native="true">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="toolTip">
-            <string>Define the CT/MRI volume node.</string>
-           </property>
-           <property name="nodeTypes" stdset="0">
-            <stringlist>
-             <string>vtkMRMLScalarVolumeNode</string>
-            </stringlist>
-           </property>
-           <property name="showChildNodeTypes" stdset="0">
-            <bool>false</bool>
-           </property>
-           <property name="addEnabled" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="removeEnabled" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="renameEnabled" stdset="0">
-            <bool>true</bool>
-           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <item>
+             <widget class="QCheckBox" name="checkBox_flip">
+              <property name="text">
+               <string>Flip</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_USSeq">
+              <property name="text">
+               <string>Generate</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
         </layout>

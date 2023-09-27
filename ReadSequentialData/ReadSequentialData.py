@@ -97,7 +97,7 @@ class ReadSequentialDataWidget(ScriptedLoadableModuleWidget, VTKObservationMixin
     self.ui.lineEdit_ScalingDir.connect('textChanged(QString)', self.updateParameterNodeFromGUI)
     self.ui.lineEdit_CTDir.connect('textChanged(QString)', self.updateParameterNodeFromGUI)
     self.ui.lineEdit_ReslicedImgDir.connect('textChanged(QString)', self.updateParameterNodeFromGUI)
-    
+    self.ui.checkBox_flip.connect("toggled(bool)", self.updateParameterNodeFromGUI)
     self.ui.comboBox_USSeq.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.comboBox_TransSeq.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.comboBox_ScalTrans.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -200,13 +200,14 @@ class ReadSequentialDataWidget(ScriptedLoadableModuleWidget, VTKObservationMixin
     self.ui.lineEdit_ScalingDir.setText(self._parameterNode.GetParameter("ScalingDir"))
     self.ui.lineEdit_CTDir.setText(self._parameterNode.GetParameter("CTDir"))
     self.ui.lineEdit_ReslicedImgDir.setText(self._parameterNode.GetParameter("ReslicedImgDir"))
+    self.ui.checkBox_flip.checked = (self._parameterNode.GetParameter("Flip") == "True")
 
     self.ui.comboBox_USSeq.setCurrentNode(self._parameterNode.GetNodeReference("USSeq"))
     self.ui.comboBox_TransSeq.setCurrentNode(self._parameterNode.GetNodeReference("TransSeq"))
     self.ui.comboBox_ScalTrans.setCurrentNode(self._parameterNode.GetNodeReference("ScalingTrans"))
     self.ui.comboBox_CT.setCurrentNode(self._parameterNode.GetNodeReference("CT_MRI"))
 
-    self.ui.DataVisibilityCheckBox.checked = (self._parameterNode.GetParameter("VisibilityFlag") == "true")
+    self.ui.DataVisibilityCheckBox.checked = (self._parameterNode.GetParameter("VisibilityFlag") == "True")
 
     # Update buttons states and tooltips
     if self._parameterNode.GetParameter("USSeqDir") and self._parameterNode.GetNodeReference("USSeq"):
@@ -264,13 +265,14 @@ class ReadSequentialDataWidget(ScriptedLoadableModuleWidget, VTKObservationMixin
     self._parameterNode.SetParameter("ScalingDir", self.ui.lineEdit_ScalingDir.text)
     self._parameterNode.SetParameter("CTDir", self.ui.lineEdit_CTDir.text)
     self._parameterNode.SetParameter("ReslicedImgDir", self.ui.lineEdit_ReslicedImgDir.text)
+    self._parameterNode.SetParameter("Flip", "True" if self.ui.checkBox_flip.checked else "False")
 
     self._parameterNode.SetNodeReferenceID("USSeq", self.ui.comboBox_USSeq.currentNodeID)    
     self._parameterNode.SetNodeReferenceID("TransSeq", self.ui.comboBox_TransSeq.currentNodeID)
     self._parameterNode.SetNodeReferenceID("ScalingTrans", self.ui.comboBox_ScalTrans.currentNodeID)
     self._parameterNode.SetNodeReferenceID("CT_MRI", self.ui.comboBox_CT.currentNodeID)
 
-    self._parameterNode.SetParameter("VisibilityFlag", "true" if self.ui.DataVisibilityCheckBox.checked else "false")
+    self._parameterNode.SetParameter("VisibilityFlag", "True" if self.ui.DataVisibilityCheckBox.checked else "False")
 
     self._parameterNode.EndModify(wasModified)
 
@@ -282,7 +284,21 @@ class ReadSequentialDataWidget(ScriptedLoadableModuleWidget, VTKObservationMixin
     Run processing when user clicks "Apply" button.
     """
     # with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
-    volumeNode = self._parameterNode.GetNodeReference("CT_MRI")
+    # volumeNode = self._parameterNode.GetNodeReference("CT_MRI")
+    
+    dir = self.ui.lineEdit_CTDir.text
+    for filename in os.listdir(dir): # making sure the file postfix  is  "image format"
+      absolute_filename_ = os.path.join(dir, filename)
+      absolute_filename = absolute_filename_.replace("\\", "\\\\") # in the raw version, "\\" will be printed as "\", therefore we replaced "\\" with "\\\\"
+      
+      #########Test the vtkimage data correctness##############
+      reader = vtk.vtkMetaImageReader()
+      reader.SetFileName(absolute_filename)
+      reader.Update()
+      volume_vtk = reader.GetOutput() # vtkimagedata with correct origin, spacing and direction
+
+
+
 
     # load sequence broswer node
     sequenceBrowserNode = self._parameterNode.GetNodeReference("SequenceBroswerNode_trackedUS")
@@ -310,7 +326,7 @@ class ReadSequentialDataWidget(ScriptedLoadableModuleWidget, VTKObservationMixin
 
     # Set the xyz origin, which defines as the center of US image
     T_imgPixel_imgMM_LPS = self.logic.ReadSlicerTransfrom(self._parameterNode.GetParameter("ScalingDir") + "\\T_imgPixel_imgMM.txt")
-    img_depth = 14
+    img_depth = 16
     imageSpacing, mask, height = self.logic.ReadMetaInfoFromDepthSetting(img_depth)
     
     center_pixel = np.array([(mask[3]-mask[2]+1)*0.5, (mask[1]-mask[0]+1)*0.5, 0, 1])
@@ -380,29 +396,33 @@ class ReadSequentialDataWidget(ScriptedLoadableModuleWidget, VTKObservationMixin
     convert.SetInputData(imageData)
     convert.Update()
 
-    writer = vtk.vtkPNGWriter()
-    writer.SetInputData(convert.GetOutput())
+    # writer = vtk.vtkPNGWriter()
+    # writer.SetInputData(convert.GetOutput())
 
-    directory = self._parameterNode.GetParameter("ReslicedImgDir")
-    filename ="Resliced" + reslicedImgName + ".png"
-    path = directory +"\\" + filename
-    writer.SetFileName(path)
-    writer.Write()
+    # directory = self._parameterNode.GetParameter("ReslicedImgDir")
+    # filename ="Resliced" + reslicedImgName + ".png"
+    # path = directory +"\\" + filename
+    # writer.SetFileName(path)
+    # writer.Write()
 
-    fieldOfView = sliceNode.GetFieldOfView()
-    Dimensions = sliceNode.GetDimensions()
-    metaFilename = "Meta" + reslicedImgName + ".txt"
-    metaFilePath = directory +"\\" +metaFilename
-    lines = ['FOV:  ' + str(fieldOfView[0]) + '  ' + str(fieldOfView[1]) + '  ' +str(fieldOfView[2]),  'Dims:  ' + str(Dimensions[0]) + '  ' + str(Dimensions[1]) + '  ' +str(Dimensions[2])]
-    with open(metaFilePath, 'w') as f:
-      for line in lines:
-        f.write(line)
-        f.write('\n')
+    # fieldOfView = sliceNode.GetFieldOfView()
+    # Dimensions = sliceNode.GetDimensions()
+    # metaFilename = "Meta" + reslicedImgName + ".txt"
+    # metaFilePath = directory +"\\" +metaFilename
+    # lines = ['FOV:  ' + str(fieldOfView[0]) + '  ' + str(fieldOfView[1]) + '  ' +str(fieldOfView[2]),  'Dims:  ' + str(Dimensions[0]) + '  ' + str(Dimensions[1]) + '  ' +str(Dimensions[2])]
+    # with open(metaFilePath, 'w') as f:
+    #   for line in lines:
+    #     f.write(line)
+    #     f.write('\n')
 
-    
+    # print(transformToWrold)
+    slabNumber = 1
+    self.logic.VolumeReslice(volume_vtk, transformToWrold, reslicedImgName, img_depth, slabNumber)
+
     print("==================================================================")
     print(filename + " saved successfully!")
     print("==================================================================") 
+
     #
     # Save this image by using the Slicer slice view
     #
@@ -586,20 +606,67 @@ class ReadSequentialDataWidget(ScriptedLoadableModuleWidget, VTKObservationMixin
     sequenceNode_US = self._parameterNode.GetNodeReference("USSeq")
     Nth = 1
     TotalN = len(os.listdir(dir))
-    for filename in os.listdir(dir): # making sure the file postfix  is  "image format"
-      absolute_filename_ = os.path.join(dir, filename)
-      absolute_filename = absolute_filename_.replace("\\", "\\\\") # in the raw version, "\\" will be printed as "\", therefore we replaced "\\" with "\\\\"
-      # print(absolute_filename)
-      loadedVolumeNode = slicer.util.loadVolume(absolute_filename, {"singleFile": True})
-      # loadedVolumeNode.GetDisplayNode().SetAndObserveColorNodeID("vtkMRMLColorTableNodeRed")
-      filename_ = filename.split('.')
-      itemIndex_ = filename_[0].split('_')
-      itemIndex = itemIndex_[1]
-      sequenceNode_US.SetDataNodeAtValue(loadedVolumeNode, itemIndex)
+    filenames = os.listdir(dir)
+    absolute_filename_ = os.path.join(dir, filenames[0])
+    absolute_filename = absolute_filename_.replace("\\", "\\\\") # in the raw version, "\\" will be printed as "\", therefore we replaced "\\" with "\\\\"
+    loadedVolumeNode = slicer.util.loadVolume(absolute_filename, {"singleFile": True})
+    
+    if self.ui.checkBox_flip.checked == True: # the US image has been flipped
+      transformNode_flip = slicer.vtkMRMLTransformNode()
+      slicer.mrmlScene.AddNode(transformNode_flip)
+      transform_matrix_flip = vtk.vtkMatrix4x4()
+      transform_matrix_flip.SetElement(0, 0, -1)
+      imageDimensions = loadedVolumeNode.GetImageData().GetDimensions()
+      imageSpacings = loadedVolumeNode.GetImageData().GetSpacing()
+      transform_matrix_translate = vtk.vtkMatrix4x4()
+      transform_matrix_translate.SetElement(0, 3, imageDimensions[0]*0.5*imageSpacings[0])
+
+      transform_matrix_translate_inverted = vtk.vtkMatrix4x4()
+      transform_matrix_translate_inverted.SetElement(0, 3, -imageDimensions[0]*0.5*imageSpacings[0])
+
+      transform_matrix_concatenated = vtk.vtkMatrix4x4()
+      vtk.vtkMatrix4x4.Multiply4x4(transform_matrix_flip, transform_matrix_translate, transform_matrix_concatenated)
+      vtk.vtkMatrix4x4.Multiply4x4(transform_matrix_translate_inverted, transform_matrix_concatenated, transform_matrix_concatenated)
+      transformNode_flip.SetMatrixTransformToParent(transform_matrix_concatenated)
+
       slicer.mrmlScene.RemoveNode(slicer.util.getNode(loadedVolumeNode.GetID()))
-      # print("Loading sequence data......{0}%".format(Nth/TotalN*100))
-      # Nth = Nth + 1
-      # time.sleep(0.05)
+      for filename in filenames: # making sure the file postfix  is  "image format"
+        absolute_filename_ = os.path.join(dir, filename)
+        absolute_filename = absolute_filename_.replace("\\", "\\\\") # in the raw version, "\\" will be printed as "\", therefore we replaced "\\" with "\\\\"
+        # print(absolute_filename)
+        loadedVolumeNode = slicer.util.loadVolume(absolute_filename, {"singleFile": True})
+        # loadedVolumeNode.GetDisplayNode().SetAndObserveColorNodeID("vtkMRMLColorTableNodeRed")
+        # Whehter flipping the US images
+        
+        loadedVolumeNode.SetAndObserveTransformNodeID(transformNode_flip.GetID())
+        loadedVolumeNode.HardenTransform()
+        
+        filename_ = filename.split('.')
+        itemIndex_ = filename_[0].split('_')
+        itemIndex = itemIndex_[1]
+        sequenceNode_US.SetDataNodeAtValue(loadedVolumeNode, itemIndex)
+        slicer.mrmlScene.RemoveNode(slicer.util.getNode(loadedVolumeNode.GetID()))
+      slicer.mrmlScene.RemoveNode(slicer.util.getNode(transformNode_flip.GetID()))
+    else:
+      slicer.mrmlScene.RemoveNode(slicer.util.getNode(loadedVolumeNode.GetID()))
+      for filename in filenames: # making sure the file postfix  is  "image format"
+        absolute_filename_ = os.path.join(dir, filename)
+        absolute_filename = absolute_filename_.replace("\\", "\\\\") # in the raw version, "\\" will be printed as "\", therefore we replaced "\\" with "\\\\"
+        # print(absolute_filename)
+        loadedVolumeNode = slicer.util.loadVolume(absolute_filename, {"singleFile": True})
+        # loadedVolumeNode.GetDisplayNode().SetAndObserveColorNodeID("vtkMRMLColorTableNodeRed")
+        # Whehter flipping the US images
+        
+        filename_ = filename.split('.')
+        itemIndex_ = filename_[0].split('_')
+        itemIndex = itemIndex_[1]
+        sequenceNode_US.SetDataNodeAtValue(loadedVolumeNode, itemIndex)
+        slicer.mrmlScene.RemoveNode(slicer.util.getNode(loadedVolumeNode.GetID()))
+        # print("Loading sequence data......{0}%".format(Nth/TotalN*100))
+        # Nth = Nth + 1
+        # time.sleep(0.05)
+    
+    
     # Create a sequence browser node for the new merged sequence
     # sequenceBrowserNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSequenceBrowserNode", "Sequence_tracked_US")
     sequenceBrowserNode = self._parameterNode.GetNodeReference("SequenceBroswerNode_trackedUS")
@@ -678,8 +745,13 @@ class ReadSequentialDataWidget(ScriptedLoadableModuleWidget, VTKObservationMixin
         self.ui.comboBox_CT.currentNode().CopyContent(loadedVolumeNode)
         # self._parameterNode.SetNodeReferenceID("ScalingTrans", node_Trans.currentNodeID)
         slicer.mrmlScene.RemoveNode(slicer.util.getNode(loadedVolumeNode.GetID()))
-    
-    
+
+        # #########Test the vtkimage data correctness##############
+        # reader = vtk.vtkMetaImageReader()
+        # reader.SetFileName(absolute_filename)
+        # reader.Update()
+        # self.volume_vtk = reader.GetOutput()
+
     print("==================================================================")
     print('Loading CT/MRI volume node successfully!')
     print("==================================================================") 
@@ -710,8 +782,6 @@ class ReadSequentialDataLogic(ScriptedLoadableModuleLogic):
   # Inputs: could be image volume node or transformation node
   # Outputs: converted sequence node
 
-  
-
 
   def __init__(self):
     """
@@ -719,7 +789,169 @@ class ReadSequentialDataLogic(ScriptedLoadableModuleLogic):
     """
     ScriptedLoadableModuleLogic.__init__(self)
 
+  def VolumeReslice(self, volume, slicingMatrix, reslicedImgName, USImg_depth ,slabNum = 1, slabMode = 2):
+    ### INPUTS
+    # volume: vtkImageData, this could be any 3D volume data (CT, MRI or 3D US)
+    # slicingTransformation, vtkMatrix4x4
+    # USImg_depth: this is specially for calibrated US, the depth info can help us obtain the image size, spacing 
+    # slabNum: slabNum = 0 (default), if slabNum > 0; each ouput slice will actually be a composite of N slices (symetric slicing from left and right sides)
+    # slabMode: if slabNum > 0, different slabMode can be chosen (VTK_IMAGE_SLAB_MIN : 0; VTK_IMAGE_SLAB_MAX: 1, VTK_IMAGE_SLAB_MEAN: 2 (default), VTK_IMAGE_SLAB_SUM: 3)
+
+    ### OUTPUTS
+    # reslicedImg: vtkImagedata format
+
+    #################################################################################################
+    ### Reslicing defination 
+    # Reslicing origin: since our 2D US image is spatially tracked, the reslicng origin is determined by the origin of the 2D US image (left-upper corner) + spatially tracked position
+    # Reslicing orientation: same as the "slicingTransformation"
+    # Resliced image resolution: same as the input 2D US image, which is obtained from "USImg_depth" 
+    # Resliced image size: same as the input 2D US image, which is obtained from "USImg_depth"
+    # Interpolation mode: "VTK_NEAREST_INTERPOLATION", "VTK_LINEAR_INTERPOLATION", "VTK_CUBIC_INTERPOLATION"
+    #################################################################################################
+
+    # Reslicing Origin + orientation
+    imageSpacing, mask, imageHeight = self.ReadMetaInfoFromDepthSetting(USImg_depth)
+    slicingTransform = vtk.vtkTransform()
+
+    translateXYZ_delta = [-(mask[3]-mask[2]+1)*0.5*imageSpacing[0], 0, 0, 1]
+   
+    translateXYZ_delta_new = [0, 0, 0, 1]
+    inOrigin = volume.GetOrigin()
+    inExtent = volume.GetExtent()
+    inSpacing = volume.GetSpacing()
+    inCenter = [inOrigin[0] + inSpacing[0]*(inExtent[1] - inExtent[0] +1) *0.5,
+                inOrigin[1] + inSpacing[1]*(inExtent[3] - inExtent[2] +1) *0.5,
+                inOrigin[2] + inSpacing[2]*(inExtent[5] - inExtent[4] +1) *0.5]
+
+    # print("INPUT imagedata.................")
+    # print("inOrigin: ", inOrigin)
+    # print("inExtent: ", inExtent)
+    # print("inSpacing: ", inSpacing)
+    # print("inCenter: ", inCenter)
+    # print("INPUT imagedata Done.............")
     
+    for slab_shift in range(-slabNum, slabNum+1):
+
+      slicingMatrix_new = vtk.vtkMatrix4x4()
+      slicingMatrix_new.DeepCopy(slicingMatrix)
+      slicingMatrix_new = self.TransformationFromRASToLPS(slicingMatrix)
+
+      # shifting the slicing position along Z axis
+      delta_shift = [0, 0, slab_shift*inSpacing[2], 1]
+      shifted_translation = [0, 0, 0, 0]
+      slicingMatrix_new.MultiplyPoint(delta_shift, shifted_translation)
+      slicingMatrix_new.SetElement(0, 3, shifted_translation[0])
+      slicingMatrix_new.SetElement(1, 3, shifted_translation[1])
+      slicingMatrix_new.SetElement(2, 3, shifted_translation[2])
+      slicingMatrix_new.SetElement(3, 3, shifted_translation[3])
+
+      slicingMatrix_new_invert = vtk.vtkMatrix4x4()
+      vtk.vtkMatrix4x4.Invert(slicingMatrix_new, slicingMatrix_new_invert)
+
+      slicingTransform.PostMultiply()
+      slicingTransform.Translate(-inCenter[0], -inCenter[1], -inCenter[2])
+      slicingTransform.SetMatrix(slicingMatrix_new_invert)
+      slicingTransform.Translate(inCenter[0], inCenter[1], inCenter[2])
+      slicingTransform.Inverse()
+      slicingTransform.Update()
+      
+      reslicer = vtk.vtkImageReslice()
+      reslicer.SetInputData(volume)
+      # reslicer.SetResliceTransform(slicingTransform)
+      reslicer.SetResliceAxes(slicingTransform.GetMatrix())
+      reslicer.SetInterpolationModeToCubic()
+      reslicer.SetOutputScalarType(-1) # same as the input
+      reslicer.SetOutputDimensionality(2)
+      reslicer.Update()
+      reslicedImg = reslicer.GetOutput()
+
+      # convert to .png image
+      table = vtk.vtkScalarsToColors()
+      intensityRange = reslicedImg.GetScalarRange()
+      table.SetRange(intensityRange[0], intensityRange[1]) # set the range of your data values
+      
+      convert = vtk.vtkImageMapToColors()
+      convert.SetLookupTable(table)
+      convert.SetOutputFormatToRGB()
+      convert.SetInputData(reslicedImg)
+      convert.Update()
+
+      flip = vtk.vtkImageFlip()
+      flip.SetInputConnection(convert.GetOutputPort())
+      flip.SetFilteredAxis(1)
+      writer = vtk.vtkPNGWriter()
+      writer.SetInputConnection(flip.GetOutputPort())
+
+      # save to .png file
+      if slab_shift < 0:
+        slab_shift_name = "neg" + str(abs(slab_shift))
+      else:
+        slab_shift_name = "pos" + str(slab_shift)
+
+      directory = self.getParameterNode().GetParameter("ReslicedImgDir")
+      filename ="Resliced" + reslicedImgName + slab_shift_name + ".png"
+      path = directory +"\\" + filename
+      writer.SetFileName(path)
+      writer.Write()
+
+
+
+    slicingMatrix_new = vtk.vtkMatrix4x4()
+    slicingMatrix_new.DeepCopy(slicingMatrix)
+    slicingMatrix_new = self.TransformationFromRASToLPS(slicingMatrix)
+    slicingMatrix_new_invert = vtk.vtkMatrix4x4()
+    vtk.vtkMatrix4x4.Invert(slicingMatrix_new, slicingMatrix_new_invert)
+
+    slicingTransform.PostMultiply()
+    slicingTransform.Translate(-inCenter[0], -inCenter[1], -inCenter[2])
+    slicingTransform.SetMatrix(slicingMatrix_new_invert)
+    slicingTransform.Translate(inCenter[0], inCenter[1], inCenter[2])
+    slicingTransform.Inverse()
+    slicingTransform.Update()
+    
+    reslicer = vtk.vtkImageReslice()
+    reslicer.SetInputData(volume)
+    # reslicer.SetResliceTransform(slicingTransform)
+    reslicer.SetResliceAxes(slicingTransform.GetMatrix())
+    reslicer.SetInterpolationModeToCubic()
+    reslicer.SetOutputScalarType(-1) # same as the input
+    # reslicer.SetOutputDimensionality(2)
+    reslicer.Update()
+    reslicedImg = reslicer.GetOutput()
+    
+    # save to .mha file
+    filename_mha ="ReslicedVol" + reslicedImgName + ".mha"
+    path_mha = directory +"\\" + filename_mha
+    writer_mha = vtk.vtkMetaImageWriter()
+    writer_mha.SetInputData(reslicedImg)
+    writer_mha.SetFileName(path_mha)
+    writer_mha.Write()
+
+
+
+
+    # # # initialize the pixels here
+    # # reslicedImg.AllocateScalars(vtk.VTK_UNSIGNED_CHAR, 1) # image type and number of components
+    # volumeNode = slicer.vtkMRMLScalarVolumeNode()
+    # volumeNode.SetAndObserveImageData(reslicedImg)
+    # volumeNode.SetSpacing(imageSpacing[0], imageSpacing[1], imageSpacing[2])
+    # # volumeNode.SetOrigin()
+    # # volumeNode.SetAndObserveImageData(volume)
+    # volumeNode = slicer.mrmlScene.AddNode(volumeNode)
+    # volumeNode.CreateDefaultDisplayNodes()
+
+    return reslicedImg    
+  def TransformationFromRASToLPS(self, transformation_RAS):
+    # transformation_RAS: vtkMatrix4x4
+    T_RAS_to_LPS = vtk.vtkMatrix4x4()
+    T_RAS_to_LPS.Identity()
+    T_RAS_to_LPS.SetElement(0, 0, -1)
+    T_RAS_to_LPS.SetElement(1, 1, -1)
+    T_temp = vtk.vtkMatrix4x4()
+    transformation_LPS = vtk.vtkMatrix4x4()
+    vtk.vtkMatrix4x4().Multiply4x4(T_RAS_to_LPS, transformation_RAS, T_temp)
+    vtk.vtkMatrix4x4().Multiply4x4(T_temp, T_RAS_to_LPS, transformation_LPS)
+    return transformation_LPS
 
   def setDefaultParameters(self, parameterNode):
     """
