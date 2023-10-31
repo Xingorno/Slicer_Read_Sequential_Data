@@ -693,7 +693,8 @@ class ReadSequentialDataWidget(ScriptedLoadableModuleWidget, VTKObservationMixin
       loadedTransformNode = slicer.util.loadTransform(absolute_filename)
       filename_ = filename.split('.')
       itemIndex_ = filename_[0].split('_')
-      itemIndex = itemIndex_[1]
+
+      itemIndex = itemIndex_[len(itemIndex_)-1] #Need to change
       sequenceNode_Trans.SetDataNodeAtValue(loadedTransformNode, itemIndex)
       slicer.mrmlScene.RemoveNode(slicer.util.getNode(loadedTransformNode.GetID()))
       # print("Loading sequence data......{0}%".format(Nth/TotalN*100))
